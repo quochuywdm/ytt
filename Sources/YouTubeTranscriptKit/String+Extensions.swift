@@ -308,11 +308,9 @@ extension String {
         //     decode("&foo;")    --> nil
         func decode(entity: String) -> Character? {
             if entity.hasPrefix("&#x") || entity.hasPrefix("&#X") {
-                return decodeNumeric(string: entity.substring(from: entity.index(entity.startIndex, offsetBy: 3)), base: 16)
-                // return decodeNumeric(string: entity.substring(from: entity.startIndex.advancedBy(3)), base: 16)
+                return decodeNumeric(string: String(entity[entity.index(entity.startIndex, offsetBy: 3)...]), base: 16)
             } else if entity.hasPrefix("&#") {
-               // return decodeNumeric(string: entity.substring(from: entity.startIndex.advancedBy(2)), base: 10)
-                return decodeNumeric(string: entity.substring(from: entity.index(entity.startIndex, offsetBy: 2)), base: 10)
+                return decodeNumeric(string: String(entity[entity.index(entity.startIndex, offsetBy: 2)...]), base: 10)
             } else {
                 return characterEntities[entity]
             }
