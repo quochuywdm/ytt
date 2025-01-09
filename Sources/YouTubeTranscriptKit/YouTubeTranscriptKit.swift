@@ -1,6 +1,6 @@
 import Foundation
 
-public struct TranscriptMoment {
+public struct TranscriptMoment: Codable {
     public let start: Double
     public let duration: Double
     public let text: String
