@@ -8,7 +8,7 @@ let package = Package(
     ],
     products: [
         .library(name: "YouTubeTranscriptKit", targets: ["YouTubeTranscriptKit"]),
-        .executable(name: "yt-transcript", targets: ["YouTubeTranscript"])
+        .executable(name: "ytt", targets: ["YouTubeTranscript"])
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.0")
