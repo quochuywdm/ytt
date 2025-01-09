@@ -7,8 +7,8 @@ struct YouTubeTranscript: ParsableCommand {
         abstract: "A utility for downloading YouTube video transcripts",
         version: "1.0.0"
     )
-    
+
     func run() throws {
         print("YouTube Transcript Downloader")
     }
-} 
+}

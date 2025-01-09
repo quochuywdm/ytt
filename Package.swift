@@ -30,4 +30,4 @@ let package = Package(
             dependencies: ["YouTubeTranscriptKit"]
         )
     ]
-) 
+)

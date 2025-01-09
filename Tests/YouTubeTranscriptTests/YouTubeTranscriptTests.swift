@@ -5,4 +5,4 @@ final class YouTubeTranscriptTests: XCTestCase {
     func testExample() throws {
         XCTAssertTrue(true)
     }
-} 
+}

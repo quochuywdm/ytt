@@ -6,4 +6,4 @@ final class YouTubeTranscriptKitTests: XCTestCase {
         let transcript = YouTubeTranscriptKit()
         XCTAssertEqual(transcript.getTranscript(), "Transcript placeholder")
     }
-} 
+}
