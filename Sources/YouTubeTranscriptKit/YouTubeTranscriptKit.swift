@@ -3,16 +3,8 @@ import Foundation
 public struct YouTubeTranscriptKit {
     public struct CaptionTrack: Codable {
         public let baseUrl: String
-        public let name: CaptionName
         public let vssId: String
         public let languageCode: String
-        public let kind: String?
-        public let isTranslatable: Bool
-        public let trackName: String
-    }
-
-    public struct CaptionName: Codable {
-        public let simpleText: String
     }
 
     public struct CaptionsResponse: Codable {
@@ -63,22 +55,42 @@ public struct YouTubeTranscriptKit {
             throw TranscriptError.invalidHTMLFormat
         }
 
-        guard let range = htmlString.range(of: "var ytInitialPlayerResponse = "),
-              let endRange = htmlString[range.upperBound...].range(of: ";</script>") else {
-            throw TranscriptError.noTranscriptData
+        var allTracks: [CaptionTrack] = []
+        var searchRange = htmlString.startIndex..<htmlString.endIndex
+        var matchCount = 0
+
+        while let range = htmlString.range(of: "var ytInitialPlayerResponse = ", range: searchRange),
+              let endRange = htmlString[range.upperBound...].range(of: ";</script>") {
+            matchCount += 1
+            print("Found match #\(matchCount)")
+
+            let jsonString = String(htmlString[range.upperBound..<endRange.lowerBound])
+            print("JSON string length: \(jsonString.count)")
+
+            if let jsonData = jsonString.data(using: .utf8) {
+                do {
+                    let response = try JSONDecoder().decode(CaptionsResponse.self, from: jsonData)
+                    let tracks = response.captions.playerCaptionsTracklistRenderer.captionTracks
+                    print("Successfully parsed \(tracks.count) tracks")
+                    allTracks.append(contentsOf: tracks)
+                } catch {
+                    print("Failed to parse JSON: \(error)")
+                }
+            } else {
+                print("Failed to convert JSON string to data")
+            }
+
+            searchRange = endRange.upperBound..<htmlString.endIndex
+            print("Updated search range, \(htmlString.distance(from: searchRange.lowerBound, to: searchRange.upperBound)) chars remaining\n")
         }
 
-        let jsonString = String(htmlString[range.upperBound..<endRange.lowerBound])
+        print("Total matches found: \(matchCount)")
+        print("Total tracks collected: \(allTracks.count)")
 
-        guard let jsonData = jsonString.data(using: .utf8) else {
-            throw TranscriptError.invalidHTMLFormat
+        guard !allTracks.isEmpty else {
+            throw TranscriptError.noCaptionData
         }
 
-        do {
-            let response = try JSONDecoder().decode(CaptionsResponse.self, from: jsonData)
-            return response.captions.playerCaptionsTracklistRenderer.captionTracks
-        } catch {
-            throw TranscriptError.jsonParsingError(error)
-        }
+        return allTracks
     }
 }
