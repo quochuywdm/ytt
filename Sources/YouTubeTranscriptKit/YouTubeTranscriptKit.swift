@@ -108,11 +108,10 @@ public struct YouTubeTranscriptKit {
                 continue
             }
 
-            let textContent = xml[startTagRange.upperBound..<endTagRange.lowerBound]
-                .replacingOccurrences(of: "&amp;#39;", with: "'")
-                .replacingOccurrences(of: "&amp;quot;", with: "\"")
-            
-            moments.append(Moment(start: start, duration: duration, text: String(textContent)))
+            let xmlContent = String(xml[startTagRange.upperBound..<endTagRange.lowerBound])
+            let textContent = xmlContent.stringByDecodingHTMLEntities
+
+            moments.append(Moment(start: start, duration: duration, text: textContent))
             searchRange = endTagRange.upperBound..<xml.endIndex
         }
 
