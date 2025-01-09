@@ -62,35 +62,42 @@ public struct YouTubeTranscriptKit {
         while let range = htmlString.range(of: "var ytInitialPlayerResponse = ", range: searchRange),
               let endRange = htmlString[range.upperBound...].range(of: ";</script>") {
             matchCount += 1
-            print("Found match #\(matchCount)")
 
             let jsonString = String(htmlString[range.upperBound..<endRange.lowerBound])
-            print("JSON string length: \(jsonString.count)")
 
             if let jsonData = jsonString.data(using: .utf8) {
                 do {
                     let response = try JSONDecoder().decode(CaptionsResponse.self, from: jsonData)
                     let tracks = response.captions.playerCaptionsTracklistRenderer.captionTracks
-                    print("Successfully parsed \(tracks.count) tracks")
                     allTracks.append(contentsOf: tracks)
                 } catch {
-                    print("Failed to parse JSON: \(error)")
+                    // Silently continue to next match on parse failure
                 }
-            } else {
-                print("Failed to convert JSON string to data")
             }
 
             searchRange = endRange.upperBound..<htmlString.endIndex
-            print("Updated search range, \(htmlString.distance(from: searchRange.lowerBound, to: searchRange.upperBound)) chars remaining\n")
         }
-
-        print("Total matches found: \(matchCount)")
-        print("Total tracks collected: \(allTracks.count)")
 
         guard !allTracks.isEmpty else {
             throw TranscriptError.noCaptionData
         }
 
-        return allTracks
+        // Sort tracks: English first (prioritizing non 'a' vssId), then others
+        let sortedTracks = allTracks.sorted { track1, track2 in
+            if track1.languageCode == "en" && track2.languageCode != "en" {
+                return true
+            }
+            if track1.languageCode != "en" && track2.languageCode == "en" {
+                return false
+            }
+            if track1.languageCode == "en" && track2.languageCode == "en" {
+                let track1StartsWithA = track1.vssId.hasPrefix("a")
+                let track2StartsWithA = track2.vssId.hasPrefix("a")
+                return track1StartsWithA == track2StartsWithA ? true : !track1StartsWithA
+            }
+            return true
+        }
+
+        return sortedTracks
     }
 }
