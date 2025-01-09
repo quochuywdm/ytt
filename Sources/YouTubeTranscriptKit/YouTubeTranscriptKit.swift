@@ -98,7 +98,7 @@ public struct YouTubeTranscriptKit {
 
         while let startTagRange = xml.range(of: #"<text start="([^"]+)" dur="([^"]+)">"#, options: .regularExpression, range: searchRange),
               let endTagRange = xml[startTagRange.upperBound...].range(of: "</text>") {
-            
+
             let attributes = xml[startTagRange]
             guard let startMatch = attributes.range(of: #"start="([^"]+)""#, options: .regularExpression),
                   let durMatch = attributes.range(of: #"dur="([^"]+)""#, options: .regularExpression),
