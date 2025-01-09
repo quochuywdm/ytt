@@ -109,7 +109,8 @@ public struct YouTubeTranscriptKit {
             }
 
             let xmlContent = String(xml[startTagRange.upperBound..<endTagRange.lowerBound])
-            let textContent = xmlContent.stringByDecodingHTMLEntities
+            let htmlContent = xmlContent.stringByDecodingHTMLEntities
+            let textContent = htmlContent.stringByDecodingHTMLEntities
 
             moments.append(Moment(start: start, duration: duration, text: textContent))
             searchRange = endTagRange.upperBound..<xml.endIndex

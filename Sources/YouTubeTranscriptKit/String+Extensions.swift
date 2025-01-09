@@ -1,7 +1,16 @@
 import Foundation
 
+//: [Previous](@previous)
+
+import Foundation
+
+var str = "Hello, playground"
+
+import Foundation
+
 // Very slightly adapted from http://stackoverflow.com/a/30141700/106244
 // 99.99% Credit to Martin R!
+
 // Mapping from XML/HTML character entity reference to character
 // From http://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references
 private let characterEntities : [String: Character] = [
@@ -271,7 +280,9 @@ extension String {
     /// all HTML character entity references with the corresponding
     /// character.
     var stringByDecodingHTMLEntities: String {
-        return decodeHTMLEntities().decodedString
+        let  x = decodeHTMLEntities()
+        //print(x.replacementOffsets.count)
+        return x.decodedString
     }
 
     /// Returns a tuple containing the string made by relpacing in the
@@ -280,14 +291,14 @@ extension String {
     /// the location and length offsets for each replacement. This allows
     /// for the correct adjust any attributes that may be associated with
     /// with substrings within the `String`
-    func decodeHTMLEntities() -> (decodedString: String, replacementOffsets: [(index: String.Index, offset: Int)]) {
+    func decodeHTMLEntities() -> (decodedString: String, replacementOffsets: [Range<String.Index>]) {
 
         // ===== Utility functions =====
 
         // Record the index offsets of each replacement
         // This allows anyone to correctly adjust any attributes that may be
         // associated with substrings within the string
-        var replacementOffsets: [(index: String.Index, offset: Int)] = []
+        var replacementOffsets: [Range<String.Index>] = []
 
         // Convert the number in the string to the corresponding
         // Unicode character, e.g.
@@ -295,7 +306,7 @@ extension String {
         //    decodeNumeric("20ac", 16) --> "€"
         func decodeNumeric(string : String, base : Int32) -> Character? {
             let code = UInt32(strtoul(string, nil, base))
-            return UnicodeScalar(code).map({ Character($0) })
+            return Character(UnicodeScalar(code)!)
         }
 
         // Decode the HTML character entity to the corresponding
@@ -306,9 +317,12 @@ extension String {
         //     decode("&foo;")    --> nil
         func decode(entity : String) -> Character? {
             if entity.hasPrefix("&#x") || entity.hasPrefix("&#X"){
-                return decodeNumeric(string: String(entity[entity.index(entity.startIndex, offsetBy: 3)...]), base: 16)
+
+                return decodeNumeric(string: entity.substring(from: entity.index(entity.startIndex, offsetBy: 3)), base: 16)
+                //return decodeNumeric(string: entity.substring(from: entity.startIndex.advancedBy(3)), base: 16)
             } else if entity.hasPrefix("&#") {
-                return decodeNumeric(string: String(entity[entity.index(entity.startIndex, offsetBy: 2)...]), base: 10)
+               // return decodeNumeric(string: entity.substring(from: entity.startIndex.advancedBy(2)), base: 10)
+                return decodeNumeric(string: entity.substring(from: entity.index(entity.startIndex, offsetBy: 2)), base: 10)
             } else {
                 return characterEntities[entity]
             }
@@ -320,26 +334,27 @@ extension String {
         var position = startIndex
 
         // Find the next '&' and copy the characters preceding it to `result`:
-        while let ampRange = self.range(of: "&", range: position ..< endIndex) {
-            result.append(contentsOf: self[position ..< ampRange.lowerBound])
+        while let ampRange = self.range(of:"&", range: position ..< endIndex) {
+            //print(ampRange)
+            result += self[position ..< ampRange.lowerBound]
+            //print( result.characters.count)
             position = ampRange.lowerBound
 
             // Find the next ';' and copy everything from '&' to ';' into `entity`
-            if let semiRange = self.range(of: ";", range: position ..< endIndex) {
-                let entity = String(self[position ..< semiRange.upperBound])
-                if let decoded = decode(entity: entity) {
+            if let semiRange = self.range(of:";", range: position ..< endIndex) {
+                let entity = self[position ..< semiRange.upperBound]
+                //print(entity)
+                if let decoded = decode(entity: String(entity)) {
 
                     // Replace by decoded character:
                     result.append(decoded)
 
-                    // Record offset
-                    let offset = (index: semiRange.upperBound, offset: 1 - self.distance(from: position, to: semiRange.upperBound))
-                    replacementOffsets.append(offset)
+                    replacementOffsets.append(Range(uncheckedBounds: (lower: position, upper: semiRange.upperBound)))
 
                 } else {
 
                     // Invalid entity, copy verbatim:
-                    result.append(contentsOf: entity)
+                    result += entity
 
                 }
                 position = semiRange.upperBound
@@ -350,10 +365,9 @@ extension String {
         }
 
         // Copy remaining characters to `result`:
-        result.append(contentsOf: self[position ..< endIndex])
+        result += self[position ..< endIndex]
 
         // Return results
         return (decodedString: result, replacementOffsets: replacementOffsets)
-
     }
 }
