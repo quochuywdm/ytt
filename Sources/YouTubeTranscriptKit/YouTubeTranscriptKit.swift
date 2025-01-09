@@ -55,6 +55,10 @@ public struct YouTubeTranscriptKit {
             throw TranscriptError.invalidHTMLFormat
         }
 
+        return try extractCaptionTracks(from: htmlString)
+    }
+
+    private func extractCaptionTracks(from htmlString: String) throws -> [CaptionTrack] {
         var allTracks: [CaptionTrack] = []
         var searchRange = htmlString.startIndex..<htmlString.endIndex
         var matchCount = 0
@@ -83,7 +87,7 @@ public struct YouTubeTranscriptKit {
         }
 
         // Sort tracks: English first (prioritizing non 'a' vssId), then others
-        let sortedTracks = allTracks.sorted { track1, track2 in
+        return allTracks.sorted { track1, track2 in
             if track1.languageCode == "en" && track2.languageCode != "en" {
                 return true
             }
@@ -97,7 +101,5 @@ public struct YouTubeTranscriptKit {
             }
             return true
         }
-
-        return sortedTracks
     }
 }
