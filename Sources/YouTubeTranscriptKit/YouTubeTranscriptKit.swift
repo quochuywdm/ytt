@@ -63,22 +63,48 @@ public struct YouTubeTranscriptKit {
             throw TranscriptError.invalidHTMLFormat
         }
 
-        guard let range = htmlString.range(of: "var ytInitialPlayerResponse = "),
-              let endRange = htmlString[range.upperBound...].range(of: ";</script>") else {
-            throw TranscriptError.noTranscriptData
+        var allTracks: [CaptionTrack] = []
+        var searchRange = htmlString.startIndex..<htmlString.endIndex
+        var matchCount = 0
+        
+        while let range = htmlString.range(of: "var ytInitialPlayerResponse = ", range: searchRange),
+              let endRange = htmlString[range.upperBound...].range(of: ";</script>") {
+            matchCount += 1
+            print("Found match #\(matchCount)")
+            
+            let jsonString = String(htmlString[range.upperBound..<endRange.lowerBound])
+            print("JSON string length: \(jsonString.count)")
+            print("JSON preview: \(String(jsonString.prefix(100)))")
+            
+            if let jsonData = jsonString.data(using: .utf8) {
+                do {
+                    let response = try JSONDecoder().decode(CaptionsResponse.self, from: jsonData)
+                    let newTracks = response.captions.playerCaptionsTracklistRenderer.captionTracks
+                    print("Successfully parsed \(newTracks.count) tracks")
+                    allTracks.append(contentsOf: newTracks)
+                } catch {
+                    print("Failed to parse JSON: \(error)")
+                    if let jsonObject = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+                       let captionsDict = jsonObject["captions"] as? [String: Any] {
+                        print("Raw captions structure: \(captionsDict)")
+                    }
+                }
+            } else {
+                print("Failed to convert JSON string to data")
+            }
+            
+            // Update search range to continue after this match
+            searchRange = endRange.upperBound..<htmlString.endIndex
+            print("Updated search range, \(htmlString.distance(from: searchRange.lowerBound, to: searchRange.upperBound)) chars remaining\n")
         }
-
-        let jsonString = String(htmlString[range.upperBound..<endRange.lowerBound])
-
-        guard let jsonData = jsonString.data(using: .utf8) else {
-            throw TranscriptError.invalidHTMLFormat
+        
+        print("Total matches found: \(matchCount)")
+        print("Total tracks collected: \(allTracks.count)")
+        
+        guard !allTracks.isEmpty else {
+            throw TranscriptError.noCaptionData
         }
-
-        do {
-            let response = try JSONDecoder().decode(CaptionsResponse.self, from: jsonData)
-            return response.captions.playerCaptionsTracklistRenderer.captionTracks
-        } catch {
-            throw TranscriptError.jsonParsingError(error)
-        }
+        
+        return allTracks
     }
 }
