@@ -31,7 +31,7 @@ public struct YouTubeTranscriptKit {
 
     public init() {}
 
-    public func getTranscript(videoID: String) async throws -> [CaptionTrack] {
+    public func getTranscript(videoID: String) async throws -> String {
         guard !videoID.isEmpty else {
             throw TranscriptError.invalidVideoID
         }
@@ -43,7 +43,7 @@ public struct YouTubeTranscriptKit {
         return try await getTranscript(url: url)
     }
 
-    public func getTranscript(url: URL) async throws -> [CaptionTrack] {
+    public func getTranscript(url: URL) async throws -> String {
         let data: Data
         do {
             (data, _) = try await URLSession.shared.data(from: url)
@@ -55,7 +55,30 @@ public struct YouTubeTranscriptKit {
             throw TranscriptError.invalidHTMLFormat
         }
 
-        return try extractCaptionTracks(from: htmlString)
+        let tracks = try extractCaptionTracks(from: htmlString)
+        let text = try await getTranscriptText(from: tracks)
+        return text
+    }
+
+    private func getTranscriptText(from tracks: [CaptionTrack]) async throws -> String {
+        for track in tracks {
+            do {
+                return try await getTranscriptText(from: track)
+            } catch {
+                continue
+            }
+        }
+        throw TranscriptError.noTranscriptData
+    }
+
+    private func getTranscriptText(from track: CaptionTrack) async throws -> String {
+        let urlString = track.baseUrl.hasPrefix("http") ? track.baseUrl : "https://www.youtube.com\(track.baseUrl)"
+        guard let url = URL(string: urlString) else {
+            throw TranscriptError.invalidURL
+        }
+
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return String(data: data, encoding: .utf8) ?? ""
     }
 
     private func extractCaptionTracks(from htmlString: String) throws -> [CaptionTrack] {
