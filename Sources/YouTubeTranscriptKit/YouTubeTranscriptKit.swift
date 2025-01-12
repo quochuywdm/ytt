@@ -44,8 +44,8 @@ public enum YouTubeTranscriptKit {
             throw TranscriptError.invalidHTMLFormat
         }
 
-        let tags = parseHTMLTags(from: htmlString)
-        return extractVideoInfo(from: tags)
+        let videoInfo = try extractVideoInfo(from: htmlString)
+        return videoInfo
     }
 
     // MARK: - Transcripts
@@ -74,65 +74,26 @@ public enum YouTubeTranscriptKit {
 
     // MARK: - Private
 
-    private static func parseHTMLTags(from html: String) -> (meta: [MetaTag], links: [LinkTag]) {
-        var metaTags: [MetaTag] = []
-        var linkTags: [LinkTag] = []
+    private static func extractVideoInfo(from htmlString: String) throws -> VideoInfo {
+        var searchRange = htmlString.startIndex..<htmlString.endIndex
 
-        // Find all meta tags
-        let metaPattern = #/<meta[^>]+>/# // matches <meta ...> tags
-        for match in html.matches(of: metaPattern) {
-            if let tag = MetaTag(tag: String(match.0)) {
-                metaTags.append(tag)
+        while let range = htmlString.range(of: "var ytInitialPlayerResponse = ", range: searchRange),
+              let endRange = htmlString[range.upperBound...].range(of: ";</script>") {
+            let jsonString = String(htmlString[range.upperBound..<endRange.lowerBound])
+
+            if let jsonData = jsonString.data(using: .utf8) {
+                do {
+                    // TODO: Parse video info from JSON
+                    throw TranscriptError.noVideoInfo
+                } catch {
+                    // Continue to next match on parse failure
+                }
             }
+
+            searchRange = endRange.upperBound..<htmlString.endIndex
         }
 
-        // Find all link tags
-        let linkPattern = #/<link[^>]+>/# // matches <link ...> tags
-        for match in html.matches(of: linkPattern) {
-            if let tag = LinkTag(tag: String(match.0)) {
-                linkTags.append(tag)
-            }
-        }
-
-        return (metaTags, linkTags)
-    }
-
-    private static func extractVideoInfo(from tags: (meta: [MetaTag], links: [LinkTag])) -> VideoInfo {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-
-        // Helper to find meta tag content
-        func metaContent(property: String? = nil, name: String? = nil) -> String? {
-            if let property = property {
-                return tags.meta.first { $0.property == property }?.content
-            }
-            if let name = name {
-                return tags.meta.first { $0.name == name }?.content
-            }
-            return nil
-        }
-
-        // Try to get each field, but don't require any
-        let title = metaContent(property: "og:title") ?? metaContent(name: "title")
-        let channelName = metaContent(property: "og:video:director") ?? metaContent(name: "author")
-        let publishedStr = metaContent(property: "og:video:release_date") ?? metaContent(name: "uploadDate")
-        let published = publishedStr.flatMap { dateFormatter.date(from: String($0.prefix(10))) }
-        let description = metaContent(property: "og:description") ?? metaContent(name: "description")
-        let channelId = metaContent(name: "channelId")
-
-        // Parse numbers, defaulting to nil on failure
-        let viewCount = metaContent(name: "interactionCount").flatMap { Int($0) }
-        let likeCount = metaContent(name: "likes").flatMap { Int($0) }
-
-        return VideoInfo(
-            title: title?.stringByDecodingHTMLEntities,
-            channelId: channelId,
-            channelName: channelName?.stringByDecodingHTMLEntities,
-            description: description?.stringByDecodingHTMLEntities,
-            publishedAt: published,
-            viewCount: viewCount,
-            likeCount: likeCount
-        )
+        throw TranscriptError.noVideoInfo
     }
 
     private static func extractCaptionTracks(from htmlString: String) throws -> [CaptionTrack] {
@@ -179,6 +140,7 @@ public enum YouTubeTranscriptKit {
             return true
         }
     }
+
     private static func getTranscriptText(from tracks: [CaptionTrack]) async throws -> [TranscriptMoment] {
         for track in tracks {
             do {
