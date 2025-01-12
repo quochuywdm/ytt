@@ -70,7 +70,7 @@ struct Info: AsyncParsableCommand {
 struct Activity: AsyncParsableCommand {
     static var configuration = CommandConfiguration(
         commandName: "activity",
-        abstract: "Process activity from a file"
+        abstract: "Parse YouTube activity history from Google Takeout's MyActivity.html file (found at Takeout/My Activity/YouTube/MyActivity.html in the zip)"
     )
 
     @Argument(help: "Path to the activity file")
