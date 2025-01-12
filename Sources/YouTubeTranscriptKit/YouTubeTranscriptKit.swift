@@ -85,6 +85,11 @@ public enum YouTubeTranscriptKit {
                 do {
                     let response = try JSONDecoder().decode(VideoResponse.self, from: jsonData)
                     let details = response.videoDetails
+                    let microformat = response.microformat.playerMicroformatRenderer
+
+                    // Parse the publish date
+                    let dateFormatter = ISO8601DateFormatter()
+                    let publishedAt = dateFormatter.date(from: microformat.publishDate)
 
                     // Convert string values to appropriate types
                     let viewCount = Int(details.viewCount)
@@ -95,9 +100,9 @@ public enum YouTubeTranscriptKit {
                         channelId: details.channelId,
                         channelName: details.author,
                         description: details.shortDescription,
-                        publishedAt: nil, // Not available in this JSON
+                        publishedAt: publishedAt,
                         viewCount: viewCount,
-                        likeCount: nil // Not available in this JSON
+                        likeCount: nil // Still not available in this JSON
                     )
                 } catch {
                     // Continue to next match on parse failure

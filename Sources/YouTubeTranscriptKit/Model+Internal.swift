@@ -11,6 +11,39 @@ import Foundation
 
 struct VideoResponse: Codable {
     let videoDetails: VideoDetails
+    let microformat: Microformat
+}
+
+struct Microformat: Codable {
+    let playerMicroformatRenderer: PlayerMicroformat
+}
+
+struct PlayerMicroformat: Codable {
+    let title: TextRuns
+    let description: TextRuns
+    let lengthSeconds: String
+    let externalChannelId: String
+    let viewCount: String
+    let category: String
+    let publishDate: String
+    let uploadDate: String
+    let ownerChannelName: String
+    let ownerProfileUrl: String
+    let liveBroadcastDetails: LiveBroadcastDetails?
+}
+
+struct TextRuns: Codable {
+    let runs: [TextRun]
+}
+
+struct TextRun: Codable {
+    let text: String
+}
+
+struct LiveBroadcastDetails: Codable {
+    let isLiveNow: Bool
+    let startTimestamp: String
+    let endTimestamp: String
 }
 
 struct VideoDetails: Codable {
