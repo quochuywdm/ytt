@@ -124,7 +124,7 @@ public enum YouTubeTranscriptKit {
                         publishedAt: publishedAt,
                         uploadedAt: uploadedAt,
                         viewCount: viewCount,
-                        lengthSeconds: lengthSeconds,
+                        duration: lengthSeconds,
                         category: microformat.category,
                         isLive: microformat.liveBroadcastDetails?.isLiveNow,
                         thumbnails: thumbnails,

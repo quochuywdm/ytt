@@ -58,7 +58,7 @@ public struct VideoInfo: Codable {
     public let publishedAt: Date?
     public let uploadedAt: Date?
     public let viewCount: Int?
-    public let lengthSeconds: Int?
+    public let duration: Int?
     public let category: String?
     public let isLive: Bool?
     public let thumbnails: [VideoThumbnail]?
