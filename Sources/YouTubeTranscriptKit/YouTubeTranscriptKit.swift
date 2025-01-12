@@ -11,6 +11,7 @@ public enum YouTubeTranscriptKit {
         case noCaptionData
         case invalidXMLFormat
         case noVideoInfo
+        case activityParseError(block: String, reason: String)
     }
 
     private static func youtubeURL(fromID videoID: String) throws -> URL {
@@ -237,5 +238,160 @@ public enum YouTubeTranscriptKit {
         }
 
         return moments
+    }
+
+    // MARK: - Activity
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy, h:mm:ss a zzz"
+        return formatter
+    }()
+
+    public static func getActivity(fileURL: URL) async throws -> [Activity] {
+        let data = try Data(contentsOf: fileURL)
+        guard let content = String(data: data, encoding: .utf8) else {
+            throw TranscriptError.invalidHTMLFormat
+        }
+
+        var activities: [Activity] = []
+        let pattern = #"<div class="outer-cell mdl-cell mdl-cell--12-col mdl-shadow--2dp">.*?</div>\s*</div>\s*</div>"#
+        let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
+        let range = NSRange(content.startIndex..<content.endIndex, in: content)
+
+        let matches = regex.matches(in: content, options: [], range: range)
+        for match in matches {
+            if let range = Range(match.range, in: content) {
+                let block = String(content[range])
+                if let activity = try parseActivityBlock(block) {
+                    activities.append(activity)
+                }
+            }
+        }
+
+        return activities
+    }
+
+    private static func parseActivityBlock(_ block: String) throws -> Activity? {
+        // Extract action - now captures text up until a URL pattern
+        let actionPattern = #"<div class="content-cell mdl-cell mdl-cell--6-col mdl-typography--body-1">([^<]+?)(?:(?:https://|<a href="))"#
+        guard let actionRegex = try? NSRegularExpression(pattern: actionPattern),
+              let actionMatch = actionRegex.firstMatch(in: block, range: NSRange(block.startIndex..<block.endIndex, in: block)),
+              actionMatch.numberOfRanges > 1,
+              let actionRange = Range(actionMatch.range(at: 1), in: block) else {
+            throw TranscriptError.activityParseError(block: block, reason: "Could not extract action")
+        }
+
+        let actionText = String(block[actionRange]).trimmingCharacters(in: .whitespaces).lowercased()
+        guard let action = Activity.Action(rawValue: actionText) else {
+            throw TranscriptError.activityParseError(block: block, reason: "Unsupported activity type: \(actionText)")
+        }
+
+        // Extract URL and parse into Link type
+        let link: Activity.Link
+
+        // Try each URL pattern in sequence
+        if let (id, title) = try? extractVideoId(from: block) {
+            link = .video(id: id, title: title)
+        } else if let (id, text) = try? extractPostId(from: block) {
+            link = .post(id: id, text: text)
+        } else if let (id, name) = try? extractChannelId(from: block) {
+            link = .channel(id: id, name: name)
+        } else if let (id, title) = try? extractPlaylistId(from: block) {
+            link = .playlist(id: id, title: title)
+        } else if let query = try? extractSearchQuery(from: block) {
+            link = .search(query: query)
+        } else {
+            throw TranscriptError.activityParseError(block: block, reason: "Could not extract URL")
+        }
+
+        // Extract timestamp
+        let datePattern = #"<br>([^<]+(?:AM|PM) [A-Z]+)"#
+        guard let dateRegex = try? NSRegularExpression(pattern: datePattern),
+              let dateMatch = dateRegex.firstMatch(in: block, range: NSRange(block.startIndex..<block.endIndex, in: block)),
+              dateMatch.numberOfRanges > 1,
+              let dateRange = Range(dateMatch.range(at: 1), in: block),
+              let date = dateFormatter.date(from: String(block[dateRange])) else {
+            throw TranscriptError.activityParseError(block: block, reason: "Could not extract timestamp")
+        }
+
+        return Activity(action: action, link: link, timestamp: date)
+    }
+
+    private static func extractVideoId(from block: String) throws -> (id: String, title: String?)? {
+        // Try anchor tag format first
+        let anchorPattern = #"<a href="(?:https://)?www\.youtube\.com/watch\?v=([^"]+)">([^<]+)</a>"#
+        if let regex = try? NSRegularExpression(pattern: anchorPattern),
+           let match = regex.firstMatch(in: block, range: NSRange(block.startIndex..<block.endIndex, in: block)),
+           match.numberOfRanges > 2,
+           let idRange = Range(match.range(at: 1), in: block),
+           let titleRange = Range(match.range(at: 2), in: block) {
+            let id = String(block[idRange])
+            let title = String(block[titleRange])
+
+            // If title is just the URL, treat it as no title
+            if title == "https://www.youtube.com/watch?v=\(id)" {
+                return (id, nil)
+            }
+            return (id, title)
+        }
+
+        // Try plain URL format
+        let plainPattern = #"https://www\.youtube\.com/watch\?v=([^<\s]+)"#
+        if let regex = try? NSRegularExpression(pattern: plainPattern),
+           let match = regex.firstMatch(in: block, range: NSRange(block.startIndex..<block.endIndex, in: block)),
+           match.numberOfRanges > 1,
+           let idRange = Range(match.range(at: 1), in: block) {
+            return (String(block[idRange]), nil)
+        }
+
+        return nil
+    }
+
+    private static func extractPostId(from block: String) throws -> (id: String, text: String)? {
+        let pattern = #"<a href="(?:https://)?www\.youtube\.com/post/([^"]+)">([^<]+)</a>"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: block, range: NSRange(block.startIndex..<block.endIndex, in: block)),
+              match.numberOfRanges > 2,
+              let idRange = Range(match.range(at: 1), in: block),
+              let textRange = Range(match.range(at: 2), in: block) else {
+            return nil
+        }
+        return (String(block[idRange]), String(block[textRange]))
+    }
+
+    private static func extractChannelId(from block: String) throws -> (id: String, name: String)? {
+        let pattern = #"<a href="(?:https://)?www\.youtube\.com/channel/([^"]+)">([^<]+)</a>"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: block, range: NSRange(block.startIndex..<block.endIndex, in: block)),
+              match.numberOfRanges > 2,
+              let idRange = Range(match.range(at: 1), in: block),
+              let nameRange = Range(match.range(at: 2), in: block) else {
+            return nil
+        }
+        return (String(block[idRange]), String(block[nameRange]))
+    }
+
+    private static func extractPlaylistId(from block: String) throws -> (id: String, title: String)? {
+        let pattern = #"<a href="(?:https://)?www\.youtube\.com/playlist\?list=([^"]+)">([^<]+)</a>"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: block, range: NSRange(block.startIndex..<block.endIndex, in: block)),
+              match.numberOfRanges > 2,
+              let idRange = Range(match.range(at: 1), in: block),
+              let titleRange = Range(match.range(at: 2), in: block) else {
+            return nil
+        }
+        return (String(block[idRange]), String(block[titleRange]))
+    }
+
+    private static func extractSearchQuery(from block: String) throws -> String? {
+        let pattern = #"<a href="(?:https://)?www\.youtube\.com/results\?search_query=([^"]+)">([^<]+)</a>"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: block, range: NSRange(block.startIndex..<block.endIndex, in: block)),
+              match.numberOfRanges > 1,
+              let queryRange = Range(match.range(at: 1), in: block) else {
+            return nil
+        }
+        return String(block[queryRange])
     }
 }
