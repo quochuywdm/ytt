@@ -135,6 +135,50 @@ public enum YouTubeTranscriptKit {
         )
     }
 
+    private static func extractCaptionTracks(from htmlString: String) throws -> [CaptionTrack] {
+        var allTracks: [CaptionTrack] = []
+        var searchRange = htmlString.startIndex..<htmlString.endIndex
+        var matchCount = 0
+
+        while let range = htmlString.range(of: "var ytInitialPlayerResponse = ", range: searchRange),
+              let endRange = htmlString[range.upperBound...].range(of: ";</script>") {
+            matchCount += 1
+
+            let jsonString = String(htmlString[range.upperBound..<endRange.lowerBound])
+
+            if let jsonData = jsonString.data(using: .utf8) {
+                do {
+                    let response = try JSONDecoder().decode(CaptionsResponse.self, from: jsonData)
+                    let tracks = response.captions.playerCaptionsTracklistRenderer.captionTracks
+                    allTracks.append(contentsOf: tracks)
+                } catch {
+                    // Silently continue to next match on parse failure
+                }
+            }
+
+            searchRange = endRange.upperBound..<htmlString.endIndex
+        }
+
+        guard !allTracks.isEmpty else {
+            throw TranscriptError.noCaptionData
+        }
+
+        // Sort tracks: English first (prioritizing non 'a' vssId), then others
+        return allTracks.sorted { track1, track2 in
+            if track1.languageCode == "en" && track2.languageCode != "en" {
+                return true
+            }
+            if track1.languageCode != "en" && track2.languageCode == "en" {
+                return false
+            }
+            if track1.languageCode == "en" && track2.languageCode == "en" {
+                let track1StartsWithA = track1.vssId.hasPrefix("a")
+                let track2StartsWithA = track2.vssId.hasPrefix("a")
+                return track1StartsWithA == track2StartsWithA ? true : !track1StartsWithA
+            }
+            return true
+        }
+    }
     private static func getTranscriptText(from tracks: [CaptionTrack]) async throws -> [TranscriptMoment] {
         for track in tracks {
             do {
@@ -185,50 +229,5 @@ public enum YouTubeTranscriptKit {
         }
 
         return moments
-    }
-
-    private static func extractCaptionTracks(from htmlString: String) throws -> [CaptionTrack] {
-        var allTracks: [CaptionTrack] = []
-        var searchRange = htmlString.startIndex..<htmlString.endIndex
-        var matchCount = 0
-
-        while let range = htmlString.range(of: "var ytInitialPlayerResponse = ", range: searchRange),
-              let endRange = htmlString[range.upperBound...].range(of: ";</script>") {
-            matchCount += 1
-
-            let jsonString = String(htmlString[range.upperBound..<endRange.lowerBound])
-
-            if let jsonData = jsonString.data(using: .utf8) {
-                do {
-                    let response = try JSONDecoder().decode(CaptionsResponse.self, from: jsonData)
-                    let tracks = response.captions.playerCaptionsTracklistRenderer.captionTracks
-                    allTracks.append(contentsOf: tracks)
-                } catch {
-                    // Silently continue to next match on parse failure
-                }
-            }
-
-            searchRange = endRange.upperBound..<htmlString.endIndex
-        }
-
-        guard !allTracks.isEmpty else {
-            throw TranscriptError.noCaptionData
-        }
-
-        // Sort tracks: English first (prioritizing non 'a' vssId), then others
-        return allTracks.sorted { track1, track2 in
-            if track1.languageCode == "en" && track2.languageCode != "en" {
-                return true
-            }
-            if track1.languageCode != "en" && track2.languageCode == "en" {
-                return false
-            }
-            if track1.languageCode == "en" && track2.languageCode == "en" {
-                let track1StartsWithA = track1.vssId.hasPrefix("a")
-                let track2StartsWithA = track2.vssId.hasPrefix("a")
-                return track1StartsWithA == track2StartsWithA ? true : !track1StartsWithA
-            }
-            return true
-        }
     }
 }
