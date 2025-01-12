@@ -22,21 +22,21 @@ public struct Activity: Codable {
     }
 
     public enum Link: Codable {
-        case video(id: String)
-        case post(id: String)
-        case channel(id: String)
-        case playlist(id: String)
+        case video(id: String, title: String?)
+        case post(id: String, text: String)
+        case channel(id: String, name: String)
+        case playlist(id: String, title: String)
         case search(query: String)
 
         public var url: URL {
             switch self {
-            case .video(let id):
+            case .video(let id, _):
                 return URL(string: "https://www.youtube.com/watch?v=\(id)")!
-            case .post(let id):
+            case .post(let id, _):
                 return URL(string: "https://www.youtube.com/post/\(id)")!
-            case .channel(let id):
+            case .channel(let id, _):
                 return URL(string: "https://www.youtube.com/channel/\(id)")!
-            case .playlist(let id):
+            case .playlist(let id, _):
                 return URL(string: "https://www.youtube.com/playlist?list=\(id)")!
             case .search(let query):
                 return URL(string: "https://www.youtube.com/results?search_query=\(query)")!
