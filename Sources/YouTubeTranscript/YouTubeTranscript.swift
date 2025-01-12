@@ -79,10 +79,13 @@ struct Activity: AsyncParsableCommand {
     mutating func run() async throws {
         let fileURL: URL
         if path.hasPrefix("/") {
-            fileURL = URL(fileURLWithPath: path)
+            fileURL = URL(fileURLWithPath: path).standardizedFileURL
+        } else if path.hasPrefix("~") {
+            let expandedPath = (path as NSString).expandingTildeInPath
+            fileURL = URL(fileURLWithPath: expandedPath).standardizedFileURL
         } else {
             let currentURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-            fileURL = currentURL.appendingPathComponent(path)
+            fileURL = currentURL.appendingPathComponent(path).standardizedFileURL
         }
 
         do {
