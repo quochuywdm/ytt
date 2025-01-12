@@ -241,11 +241,24 @@ public enum YouTubeTranscriptKit {
 
     // MARK: - Activity
 
-    public static func getActivity(fileURL: URL) async throws -> String {
+    public static func getActivity(fileURL: URL) async throws -> [String] {
         let data = try Data(contentsOf: fileURL)
         guard let content = String(data: data, encoding: .utf8) else {
             throw TranscriptError.invalidHTMLFormat
         }
-        return content
+
+        var activities: [String] = []
+        let pattern = #"<div class="outer-cell mdl-cell mdl-cell--12-col mdl-shadow--2dp">.*?</div>\s*</div>\s*</div>"#
+        let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
+        let range = NSRange(content.startIndex..<content.endIndex, in: content)
+
+        let matches = regex.matches(in: content, options: [], range: range)
+        for match in matches {
+            if let range = Range(match.range, in: content) {
+                activities.append(String(content[range]))
+            }
+        }
+
+        return activities
     }
 }

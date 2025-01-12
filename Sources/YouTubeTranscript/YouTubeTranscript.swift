@@ -85,7 +85,13 @@ struct Activity: AsyncParsableCommand {
             fileURL = currentURL.appendingPathComponent(path)
         }
 
-        let result = try await YouTubeTranscriptKit.getActivity(fileURL: fileURL)
-        print(result)
+        let activities = try await YouTubeTranscriptKit.getActivity(fileURL: fileURL)
+        print("Found \(activities.count) activities")
+
+        // Print first activity as sample
+        if let first = activities.first {
+            print("\nSample activity block:")
+            print(first)
+        }
     }
 }
