@@ -333,7 +333,7 @@ public enum YouTubeTranscriptKit {
             if title == "https://www.youtube.com/watch?v=\(id)" {
                 return (id, nil)
             }
-            return (id, title)
+            return (id, title.stringByDecodingHTMLEntities)
         }
 
         // Try plain URL format
@@ -357,7 +357,7 @@ public enum YouTubeTranscriptKit {
               let textRange = Range(match.range(at: 2), in: block) else {
             return nil
         }
-        return (String(block[idRange]), String(block[textRange]))
+        return (String(block[idRange]), String(block[textRange]).stringByDecodingHTMLEntities)
     }
 
     private static func extractChannelId(from block: String) throws -> (id: String, name: String)? {
@@ -369,7 +369,7 @@ public enum YouTubeTranscriptKit {
               let nameRange = Range(match.range(at: 2), in: block) else {
             return nil
         }
-        return (String(block[idRange]), String(block[nameRange]))
+        return (String(block[idRange]), String(block[nameRange]).stringByDecodingHTMLEntities)
     }
 
     private static func extractPlaylistId(from block: String) throws -> (id: String, title: String)? {
@@ -381,7 +381,7 @@ public enum YouTubeTranscriptKit {
               let titleRange = Range(match.range(at: 2), in: block) else {
             return nil
         }
-        return (String(block[idRange]), String(block[titleRange]))
+        return (String(block[idRange]), String(block[titleRange]).stringByDecodingHTMLEntities)
     }
 
     private static func extractSearchQuery(from block: String) throws -> String? {
@@ -392,6 +392,6 @@ public enum YouTubeTranscriptKit {
               let queryRange = Range(match.range(at: 1), in: block) else {
             return nil
         }
-        return String(block[queryRange])
+        return String(block[queryRange]).stringByDecodingHTMLEntities
     }
 }
