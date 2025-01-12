@@ -44,7 +44,21 @@ struct Info: AsyncParsableCommand {
     var input: String
 
     mutating func run() async throws {
-        // Stub for info command
-        print("Info command not yet implemented for: \(input)")
+        let info: VideoInfo
+
+        if input.contains("youtube.com") || input.contains("youtu.be"),
+           let url = URL(string: input) {
+            info = try await YouTubeTranscriptKit.getVideoInfo(url: url)
+        } else {
+            info = try await YouTubeTranscriptKit.getVideoInfo(videoID: input)
+        }
+
+        print("Title: \(info.title)")
+        print("Channel: \(info.channelName) (\(info.channelId))")
+        print("Published: \(info.publishedAt)")
+        print("Views: \(info.viewCount)")
+        print("Likes: \(info.likeCount)")
+        print("\nDescription:")
+        print(info.description)
     }
 }

@@ -1,5 +1,15 @@
 import Foundation
 
+public struct VideoInfo: Codable {
+    public let title: String
+    public let channelId: String
+    public let channelName: String
+    public let description: String
+    public let publishedAt: Date
+    public let viewCount: Int
+    public let likeCount: Int
+}
+
 public struct TranscriptMoment: Codable {
     public let start: Double
     public let duration: Double
@@ -34,9 +44,10 @@ public enum YouTubeTranscriptKit {
         case jsonParsingError(Error)
         case noCaptionData
         case invalidXMLFormat
+        case noVideoInfo
     }
 
-    public static func getTranscript(videoID: String) async throws -> [TranscriptMoment] {
+    private static func youtubeURL(fromID videoID: String) throws -> URL {
         guard !videoID.isEmpty else {
             throw TranscriptError.invalidVideoID
         }
@@ -45,6 +56,32 @@ public enum YouTubeTranscriptKit {
             throw TranscriptError.invalidURL
         }
 
+        return url
+    }
+
+    public static func getVideoInfo(videoID: String) async throws -> VideoInfo {
+        let url = try youtubeURL(fromID: videoID)
+        return try await getVideoInfo(url: url)
+    }
+
+    public static func getVideoInfo(url: URL) async throws -> VideoInfo {
+        let data: Data
+        do {
+            (data, _) = try await URLSession.shared.data(from: url)
+        } catch {
+            throw TranscriptError.networkError(error)
+        }
+
+        guard let htmlString = String(data: data, encoding: .utf8) else {
+            throw TranscriptError.invalidHTMLFormat
+        }
+
+        // TODO: Parse video info from htmlString
+        throw TranscriptError.noVideoInfo
+    }
+
+    public static func getTranscript(videoID: String) async throws -> [TranscriptMoment] {
+        let url = try youtubeURL(fromID: videoID)
         return try await getTranscript(url: url)
     }
 
