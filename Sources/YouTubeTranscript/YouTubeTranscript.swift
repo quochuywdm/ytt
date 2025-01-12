@@ -85,38 +85,46 @@ struct Activity: AsyncParsableCommand {
             fileURL = currentURL.appendingPathComponent(path)
         }
 
-        let activities = try await YouTubeTranscriptKit.getActivity(fileURL: fileURL)
-        print("Found \(activities.count) activities")
+        do {
+            let activities = try await YouTubeTranscriptKit.getActivity(fileURL: fileURL)
+            print("Found \(activities.count) activities")
 
-        // Print first few activities as sample
-        for (index, activity) in (activities.prefix(3) + [activities.randomElement()!] + [activities.randomElement()!]).enumerated() {
-            print("\nActivity \(index + 1):")
-            print("Action: \(activity.action.rawValue)")
-            switch activity.link {
-            case .video(let id, let title):
-                print("Type: Video")
-                print("ID: \(id)")
-                if let title = title {
+            // Print first few activities as sample
+            for (index, activity) in activities.prefix(3).enumerated() {
+                print("\nActivity \(index + 1):")
+                print("Action: \(activity.action.rawValue)")
+                switch activity.link {
+                case .video(let id, let title):
+                    print("Type: Video")
+                    print("ID: \(id)")
+                    if let title = title {
+                        print("Title: \(title)")
+                    }
+                case .post(let id, let text):
+                    print("Type: Post")
+                    print("ID: \(id)")
+                    print("Text: \(text)")
+                case .channel(let id, let name):
+                    print("Type: Channel")
+                    print("ID: \(id)")
+                    print("Name: \(name)")
+                case .playlist(let id, let title):
+                    print("Type: Playlist")
+                    print("ID: \(id)")
                     print("Title: \(title)")
+                case .search(let query):
+                    print("Type: Search")
+                    print("Query: \(query)")
                 }
-            case .post(let id, let text):
-                print("Type: Post")
-                print("ID: \(id)")
-                print("Text: \(text)")
-            case .channel(let id, let name):
-                print("Type: Channel")
-                print("ID: \(id)")
-                print("Name: \(name)")
-            case .playlist(let id, let title):
-                print("Type: Playlist")
-                print("ID: \(id)")
-                print("Title: \(title)")
-            case .search(let query):
-                print("Type: Search")
-                print("Query: \(query)")
+                print("URL: \(activity.link.url)")
+                print("Time: \(activity.timestamp)")
             }
-            print("URL: \(activity.link.url)")
-            print("Time: \(activity.timestamp)")
+        } catch YouTubeTranscriptKit.TranscriptError.activityParseError(let block, let reason) {
+            print("Failed to parse activity block:")
+            print("Reason: \(reason)")
+            print("\nBlock content:")
+            print(block)
+            throw YouTubeTranscriptKit.TranscriptError.activityParseError(block: block, reason: reason)
         }
     }
 }

@@ -11,6 +11,7 @@ public enum YouTubeTranscriptKit {
         case noCaptionData
         case invalidXMLFormat
         case noVideoInfo
+        case activityParseError(block: String, reason: String)
     }
 
     private static func youtubeURL(fromID videoID: String) throws -> URL {
@@ -278,12 +279,12 @@ public enum YouTubeTranscriptKit {
               let actionMatch = actionRegex.firstMatch(in: block, range: NSRange(block.startIndex..<block.endIndex, in: block)),
               actionMatch.numberOfRanges > 1,
               let actionRange = Range(actionMatch.range(at: 1), in: block) else {
-            throw TranscriptError.invalidHTMLFormat
+            throw TranscriptError.activityParseError(block: block, reason: "Could not extract action")
         }
 
         let actionText = String(block[actionRange]).trimmingCharacters(in: .whitespaces).lowercased()
         guard let action = Activity.Action(rawValue: actionText) else {
-            fatalError("Found unsupported activity: \(actionText)")
+            throw TranscriptError.activityParseError(block: block, reason: "Unsupported activity type: \(actionText)")
         }
 
         // Extract URL and parse into Link type
@@ -301,7 +302,7 @@ public enum YouTubeTranscriptKit {
         } else if let query = try? extractSearchQuery(from: block) {
             link = .search(query: query)
         } else {
-            throw TranscriptError.invalidHTMLFormat
+            throw TranscriptError.activityParseError(block: block, reason: "Could not extract URL")
         }
 
         // Extract timestamp
@@ -311,7 +312,7 @@ public enum YouTubeTranscriptKit {
               dateMatch.numberOfRanges > 1,
               let dateRange = Range(dateMatch.range(at: 1), in: block),
               let date = dateFormatter.date(from: String(block[dateRange])) else {
-            throw TranscriptError.invalidHTMLFormat
+            throw TranscriptError.activityParseError(block: block, reason: "Could not extract timestamp")
         }
 
         return Activity(action: action, link: link, timestamp: date)
