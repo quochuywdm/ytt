@@ -43,14 +43,17 @@ struct Info: AsyncParsableCommand {
     @Argument(help: "YouTube video URL or ID")
     var input: String
 
+    @Flag(name: .long, help: "Include transcript in the output")
+    var includeTranscript = false
+
     mutating func run() async throws {
         let info: VideoInfo
 
         if input.contains("youtube.com") || input.contains("youtu.be"),
            let url = URL(string: input) {
-            info = try await YouTubeTranscriptKit.getVideoInfo(url: url)
+            info = try await YouTubeTranscriptKit.getVideoInfo(url: url, includeTranscript: includeTranscript)
         } else {
-            info = try await YouTubeTranscriptKit.getVideoInfo(videoID: input)
+            info = try await YouTubeTranscriptKit.getVideoInfo(videoID: input, includeTranscript: includeTranscript)
         }
 
         let encoder = JSONEncoder()

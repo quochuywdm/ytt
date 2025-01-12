@@ -27,12 +27,12 @@ public enum YouTubeTranscriptKit {
 
     // MARK: - Video Info
 
-    public static func getVideoInfo(videoID: String) async throws -> VideoInfo {
+    public static func getVideoInfo(videoID: String, includeTranscript: Bool = true) async throws -> VideoInfo {
         let url = try youtubeURL(fromID: videoID)
-        return try await getVideoInfo(url: url)
+        return try await getVideoInfo(url: url, includeTranscript: includeTranscript)
     }
 
-    public static func getVideoInfo(url: URL) async throws -> VideoInfo {
+    public static func getVideoInfo(url: URL, includeTranscript: Bool = true) async throws -> VideoInfo {
         let data: Data
         do {
             (data, _) = try await URLSession.shared.data(from: url)
@@ -44,7 +44,7 @@ public enum YouTubeTranscriptKit {
             throw TranscriptError.invalidHTMLFormat
         }
 
-        let videoInfo = try extractVideoInfo(from: htmlString)
+        let videoInfo = try await extractVideoInfo(from: htmlString, includeTranscript: includeTranscript)
         return videoInfo
     }
 
@@ -74,7 +74,7 @@ public enum YouTubeTranscriptKit {
 
     // MARK: - Private
 
-    private static func extractVideoInfo(from htmlString: String) throws -> VideoInfo {
+    private static func extractVideoInfo(from htmlString: String, includeTranscript: Bool) async throws -> VideoInfo {
         var searchRange = htmlString.startIndex..<htmlString.endIndex
 
         while let range = htmlString.range(of: "var ytInitialPlayerResponse = ", range: searchRange),
@@ -105,6 +105,15 @@ public enum YouTubeTranscriptKit {
                     let channelURL = URL(string: "https://www.youtube.com/channel/\(details.channelId)")
                     let videoURL = URL(string: "https://www.youtube.com/watch?v=\(details.videoId)")
 
+                    // Extract transcript if requested
+                    let transcript: [TranscriptMoment]?
+                    if includeTranscript {
+                        let captionTracks = try extractCaptionTracks(from: htmlString)
+                        transcript = try await getTranscriptText(from: captionTracks)
+                    } else {
+                        transcript = nil
+                    }
+
                     return VideoInfo(
                         videoId: details.videoId,
                         title: details.title,
@@ -119,7 +128,8 @@ public enum YouTubeTranscriptKit {
                         isLive: microformat.liveBroadcastDetails?.isLiveNow,
                         thumbnails: thumbnails,
                         channelURL: channelURL,
-                        videoURL: videoURL
+                        videoURL: videoURL,
+                        transcript: transcript
                     )
                 } catch {
                     // Continue to next match on parse failure

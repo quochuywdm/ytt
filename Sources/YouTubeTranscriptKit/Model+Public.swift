@@ -22,6 +22,7 @@ public struct VideoInfo: Codable {
     public let thumbnails: [VideoThumbnail]?
     public let channelURL: URL?
     public let videoURL: URL?
+    public let transcript: [TranscriptMoment]?
 }
 
 public struct VideoThumbnail: Codable {
