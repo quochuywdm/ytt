@@ -8,13 +8,26 @@
 import Foundation
 
 public struct VideoInfo: Codable {
+    public let videoId: String?
     public let title: String?
     public let channelId: String?
     public let channelName: String?
     public let description: String?
     public let publishedAt: Date?
+    public let uploadedAt: Date?
     public let viewCount: Int?
-    public let likeCount: Int?
+    public let lengthSeconds: Int?
+    public let category: String?
+    public let isLive: Bool?
+    public let thumbnails: [VideoThumbnail]?
+    public let channelURL: URL?
+    public let videoURL: URL?
+}
+
+public struct VideoThumbnail: Codable {
+    public let url: String
+    public let width: Int
+    public let height: Int
 }
 
 public struct TranscriptMoment: Codable {

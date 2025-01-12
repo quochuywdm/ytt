@@ -87,22 +87,39 @@ public enum YouTubeTranscriptKit {
                     let details = response.videoDetails
                     let microformat = response.microformat.playerMicroformatRenderer
 
-                    // Parse the publish date
+                    // Parse dates
                     let dateFormatter = ISO8601DateFormatter()
                     let publishedAt = dateFormatter.date(from: microformat.publishDate)
+                    let uploadedAt = dateFormatter.date(from: microformat.uploadDate)
 
                     // Convert string values to appropriate types
                     let viewCount = Int(details.viewCount)
                     let lengthSeconds = Int(details.lengthSeconds)
 
+                    // Convert thumbnails
+                    let thumbnails = details.thumbnail.thumbnails.map { thumb in
+                        VideoThumbnail(url: thumb.url, width: thumb.width, height: thumb.height)
+                    }
+
+                    // Build URLs
+                    let channelURL = URL(string: "https://www.youtube.com/channel/\(details.channelId)")
+                    let videoURL = URL(string: "https://www.youtube.com/watch?v=\(details.videoId)")
+
                     return VideoInfo(
+                        videoId: details.videoId,
                         title: details.title,
                         channelId: details.channelId,
                         channelName: details.author,
                         description: details.shortDescription,
                         publishedAt: publishedAt,
+                        uploadedAt: uploadedAt,
                         viewCount: viewCount,
-                        likeCount: nil // Still not available in this JSON
+                        lengthSeconds: lengthSeconds,
+                        category: microformat.category,
+                        isLive: microformat.liveBroadcastDetails?.isLiveNow,
+                        thumbnails: thumbnails,
+                        channelURL: channelURL,
+                        videoURL: videoURL
                     )
                 } catch {
                     // Continue to next match on parse failure
