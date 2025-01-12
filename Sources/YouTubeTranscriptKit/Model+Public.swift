@@ -10,8 +10,15 @@ import Foundation
 public struct Activity: Codable {
     public enum Action: String, Codable {
         case watched = "watched"
+        case watchedStory = "watched story"
         case viewed = "viewed"
         case liked = "liked"
+        case disliked = "disliked"
+        case subscribedTo = "subscribed to"
+        case answered = "answered"
+        case votedOn = "voted on"
+        case saved = "saved"
+        case searchedFor = "searched for"
     }
 
     public let action: Action

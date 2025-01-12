@@ -272,8 +272,8 @@ public enum YouTubeTranscriptKit {
     }
 
     private static func parseActivityBlock(_ block: String) throws -> Activity? {
-        // Extract action
-        let actionPattern = #"<div class="content-cell mdl-cell mdl-cell--6-col mdl-typography--body-1">([^<]+)"#
+        // Extract action - now captures text up until a URL pattern
+        let actionPattern = #"<div class="content-cell mdl-cell mdl-cell--6-col mdl-typography--body-1">([^<]+?)(?:(?:https://|<a href="))"#
         guard let actionRegex = try? NSRegularExpression(pattern: actionPattern),
               let actionMatch = actionRegex.firstMatch(in: block, range: NSRange(block.startIndex..<block.endIndex, in: block)),
               actionMatch.numberOfRanges > 1,
@@ -286,12 +286,12 @@ public enum YouTubeTranscriptKit {
             fatalError("Found unsupported activity: \(actionText)")
         }
 
-        // Extract URL - handles all YouTube URL types
-        let urlPattern = #"<a href="(https://www\.youtube\.com/(?:watch\?v=[^"]+|post/[^"]+|channel/[^"]+))""#
+        // Extract URL - handles both plain text and anchor tag URLs
+        let urlPattern = #"(?:<a href="(https://www\.youtube\.com/(?:watch\?v=[^"]+|post/[^"]+|channel/[^"]+|playlist\?list=[^"]+|results\?search_query=[^"]+))"|(https://www\.youtube\.com/(?:watch\?v=[^<\s]+|post/[^<\s]+|channel/[^<\s]+|playlist\?list=[^<\s]+|results\?search_query=[^<\s]+)))"#
         guard let urlRegex = try? NSRegularExpression(pattern: urlPattern),
               let urlMatch = urlRegex.firstMatch(in: block, range: NSRange(block.startIndex..<block.endIndex, in: block)),
-              urlMatch.numberOfRanges > 1,
-              let urlRange = Range(urlMatch.range(at: 1), in: block),
+              urlMatch.numberOfRanges > 2,
+              let urlRange = Range(urlMatch.range(at: 1), in: block) ?? Range(urlMatch.range(at: 2), in: block),
               let url = URL(string: String(block[urlRange])) else {
             throw TranscriptError.invalidHTMLFormat
         }
