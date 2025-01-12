@@ -83,8 +83,22 @@ public enum YouTubeTranscriptKit {
 
             if let jsonData = jsonString.data(using: .utf8) {
                 do {
-                    // TODO: Parse video info from JSON
-                    throw TranscriptError.noVideoInfo
+                    let response = try JSONDecoder().decode(VideoResponse.self, from: jsonData)
+                    let details = response.videoDetails
+
+                    // Convert string values to appropriate types
+                    let viewCount = Int(details.viewCount)
+                    let lengthSeconds = Int(details.lengthSeconds)
+
+                    return VideoInfo(
+                        title: details.title,
+                        channelId: details.channelId,
+                        channelName: details.author,
+                        description: details.shortDescription,
+                        publishedAt: nil, // Not available in this JSON
+                        viewCount: viewCount,
+                        likeCount: nil // Not available in this JSON
+                    )
                 } catch {
                     // Continue to next match on parse failure
                 }
