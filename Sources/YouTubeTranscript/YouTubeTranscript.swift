@@ -7,7 +7,7 @@ struct YTT: AsyncParsableCommand {
     static var configuration = CommandConfiguration(
         abstract: "A utility for downloading YouTube video transcripts",
         version: "1.0.0",
-        subcommands: [Transcribe.self, Info.self]
+        subcommands: [Transcribe.self, Info.self, Activity.self]
     )
 }
 
@@ -64,5 +64,28 @@ struct Info: AsyncParsableCommand {
         if let json = String(data: data, encoding: .utf8) {
             print(json)
         }
+    }
+}
+
+struct Activity: AsyncParsableCommand {
+    static var configuration = CommandConfiguration(
+        commandName: "activity",
+        abstract: "Process activity from a file"
+    )
+
+    @Argument(help: "Path to the activity file")
+    var path: String
+
+    mutating func run() async throws {
+        let fileURL: URL
+        if path.hasPrefix("/") {
+            fileURL = URL(fileURLWithPath: path)
+        } else {
+            let currentURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+            fileURL = currentURL.appendingPathComponent(path)
+        }
+
+        let result = try await YouTubeTranscriptKit.getActivity(fileURL: fileURL)
+        print(result)
     }
 }

@@ -238,4 +238,14 @@ public enum YouTubeTranscriptKit {
 
         return moments
     }
+
+    // MARK: - Activity
+
+    public static func getActivity(fileURL: URL) async throws -> String {
+        let data = try Data(contentsOf: fileURL)
+        guard let content = String(data: data, encoding: .utf8) else {
+            throw TranscriptError.invalidHTMLFormat
+        }
+        return content
+    }
 }
