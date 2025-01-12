@@ -53,12 +53,32 @@ struct Info: AsyncParsableCommand {
             info = try await YouTubeTranscriptKit.getVideoInfo(videoID: input)
         }
 
-        print("Title: \(info.title)")
-        print("Channel: \(info.channelName) (\(info.channelId))")
-        print("Published: \(info.publishedAt)")
-        print("Views: \(info.viewCount)")
-        print("Likes: \(info.likeCount)")
-        print("\nDescription:")
-        print(info.description)
+        if let title = info.title {
+            print("Title: \(title)")
+        }
+
+        if let channelName = info.channelName {
+            print("Channel: \(channelName)\(info.channelId.map { " (\($0))" } ?? "")")
+        }
+
+        if let published = info.publishedAt {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .none
+            print("Published: \(formatter.string(from: published))")
+        }
+
+        if let views = info.viewCount {
+            print("Views: \(NumberFormatter.localizedString(from: NSNumber(value: views), number: .decimal))")
+        }
+
+        if let likes = info.likeCount {
+            print("Likes: \(NumberFormatter.localizedString(from: NSNumber(value: likes), number: .decimal))")
+        }
+
+        if let description = info.description {
+            print("\nDescription:")
+            print(description)
+        }
     }
 }

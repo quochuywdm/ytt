@@ -45,7 +45,7 @@ public enum YouTubeTranscriptKit {
         }
 
         let tags = parseHTMLTags(from: htmlString)
-        return try extractVideoInfo(from: tags)
+        return extractVideoInfo(from: tags)
     }
 
     // MARK: - Transcripts
@@ -97,7 +97,7 @@ public enum YouTubeTranscriptKit {
         return (metaTags, linkTags)
     }
 
-    private static func extractVideoInfo(from tags: (meta: [MetaTag], links: [LinkTag])) throws -> VideoInfo {
+    private static func extractVideoInfo(from tags: (meta: [MetaTag], links: [LinkTag])) -> VideoInfo {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
 
@@ -112,25 +112,23 @@ public enum YouTubeTranscriptKit {
             return nil
         }
 
-        // Required fields - throw if missing
-        guard let title = metaContent(property: "og:title") ?? metaContent(name: "title"),
-              let channelName = metaContent(property: "og:video:director") ?? metaContent(name: "author"),
-              let publishedStr = metaContent(property: "og:video:release_date") ?? metaContent(name: "uploadDate"),
-              let published = dateFormatter.date(from: String(publishedStr.prefix(10))),
-              let description = metaContent(property: "og:description") ?? metaContent(name: "description"),
-              let channelId = metaContent(name: "channelId") else {
-            throw TranscriptError.noVideoInfo
-        }
+        // Try to get each field, but don't require any
+        let title = metaContent(property: "og:title") ?? metaContent(name: "title")
+        let channelName = metaContent(property: "og:video:director") ?? metaContent(name: "author")
+        let publishedStr = metaContent(property: "og:video:release_date") ?? metaContent(name: "uploadDate")
+        let published = publishedStr.flatMap { dateFormatter.date(from: String($0.prefix(10))) }
+        let description = metaContent(property: "og:description") ?? metaContent(name: "description")
+        let channelId = metaContent(name: "channelId")
 
-        // Optional fields - default to 0 if missing
-        let viewCount = Int(metaContent(name: "interactionCount") ?? "0") ?? 0
-        let likeCount = Int(metaContent(name: "likes") ?? "0") ?? 0
+        // Parse numbers, defaulting to nil on failure
+        let viewCount = metaContent(name: "interactionCount").flatMap { Int($0) }
+        let likeCount = metaContent(name: "likes").flatMap { Int($0) }
 
         return VideoInfo(
-            title: title.stringByDecodingHTMLEntities,
+            title: title?.stringByDecodingHTMLEntities,
             channelId: channelId,
-            channelName: channelName.stringByDecodingHTMLEntities,
-            description: description.stringByDecodingHTMLEntities,
+            channelName: channelName?.stringByDecodingHTMLEntities,
+            description: description?.stringByDecodingHTMLEntities,
             publishedAt: published,
             viewCount: viewCount,
             likeCount: likeCount
