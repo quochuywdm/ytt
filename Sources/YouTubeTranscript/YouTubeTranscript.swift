@@ -88,10 +88,13 @@ struct Activity: AsyncParsableCommand {
         let activities = try await YouTubeTranscriptKit.getActivity(fileURL: fileURL)
         print("Found \(activities.count) activities")
 
-        // Print first activity as sample
-        if let first = activities.first {
-            print("\nSample activity block:")
-            print(first)
+        // Print first few activities as sample
+        for (index, activity) in activities.prefix(3).enumerated() {
+            print("\nActivity \(index + 1):")
+            print("Action: \(activity.action.rawValue)")
+            print("URL: \(activity.url)")
+            print("Time: \(activity.timestamp)")
+            return
         }
     }
 }

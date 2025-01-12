@@ -241,13 +241,19 @@ public enum YouTubeTranscriptKit {
 
     // MARK: - Activity
 
-    public static func getActivity(fileURL: URL) async throws -> [String] {
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy, h:mm:ss a zzz"
+        return formatter
+    }()
+
+    public static func getActivity(fileURL: URL) async throws -> [Activity] {
         let data = try Data(contentsOf: fileURL)
         guard let content = String(data: data, encoding: .utf8) else {
             throw TranscriptError.invalidHTMLFormat
         }
 
-        var activities: [String] = []
+        var activities: [Activity] = []
         let pattern = #"<div class="outer-cell mdl-cell mdl-cell--12-col mdl-shadow--2dp">.*?</div>\s*</div>\s*</div>"#
         let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
         let range = NSRange(content.startIndex..<content.endIndex, in: content)
@@ -255,10 +261,51 @@ public enum YouTubeTranscriptKit {
         let matches = regex.matches(in: content, options: [], range: range)
         for match in matches {
             if let range = Range(match.range, in: content) {
-                activities.append(String(content[range]))
+                let block = String(content[range])
+                if let activity = try parseActivityBlock(block) {
+                    activities.append(activity)
+                }
             }
         }
 
         return activities
+    }
+
+    private static func parseActivityBlock(_ block: String) throws -> Activity? {
+        // Extract action
+        let actionPattern = #"<div class="content-cell mdl-cell mdl-cell--6-col mdl-typography--body-1">([^<]+)"#
+        guard let actionRegex = try? NSRegularExpression(pattern: actionPattern),
+              let actionMatch = actionRegex.firstMatch(in: block, range: NSRange(block.startIndex..<block.endIndex, in: block)),
+              actionMatch.numberOfRanges > 1,
+              let actionRange = Range(actionMatch.range(at: 1), in: block) else {
+            throw TranscriptError.invalidHTMLFormat
+        }
+
+        let actionText = String(block[actionRange]).trimmingCharacters(in: .whitespaces).lowercased()
+        guard let action = Activity.Action(rawValue: actionText) else {
+            fatalError("Found unsupported activity: \(actionText)")
+        }
+
+        // Extract URL - handles all YouTube URL types
+        let urlPattern = #"<a href="(https://www\.youtube\.com/(?:watch\?v=[^"]+|post/[^"]+|channel/[^"]+))""#
+        guard let urlRegex = try? NSRegularExpression(pattern: urlPattern),
+              let urlMatch = urlRegex.firstMatch(in: block, range: NSRange(block.startIndex..<block.endIndex, in: block)),
+              urlMatch.numberOfRanges > 1,
+              let urlRange = Range(urlMatch.range(at: 1), in: block),
+              let url = URL(string: String(block[urlRange])) else {
+            throw TranscriptError.invalidHTMLFormat
+        }
+
+        // Extract timestamp
+        let datePattern = #"<br>([^<]+(?:AM|PM) [A-Z]+)"#
+        guard let dateRegex = try? NSRegularExpression(pattern: datePattern),
+              let dateMatch = dateRegex.firstMatch(in: block, range: NSRange(block.startIndex..<block.endIndex, in: block)),
+              dateMatch.numberOfRanges > 1,
+              let dateRange = Range(dateMatch.range(at: 1), in: block),
+              let date = dateFormatter.date(from: String(block[dateRange])) else {
+            throw TranscriptError.invalidHTMLFormat
+        }
+
+        return Activity(action: action, url: url, timestamp: date)
     }
 }

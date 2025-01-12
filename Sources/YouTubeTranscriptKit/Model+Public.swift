@@ -7,6 +7,18 @@
 
 import Foundation
 
+public struct Activity: Codable {
+    public enum Action: String, Codable {
+        case watched = "watched"
+        case viewed = "viewed"
+        case liked = "liked"
+    }
+
+    public let action: Action
+    public let url: URL
+    public let timestamp: Date
+}
+
 public struct VideoInfo: Codable {
     public let videoId: String?
     public let title: String?
