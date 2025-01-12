@@ -92,9 +92,25 @@ struct Activity: AsyncParsableCommand {
         for (index, activity) in activities.prefix(3).enumerated() {
             print("\nActivity \(index + 1):")
             print("Action: \(activity.action.rawValue)")
-            print("URL: \(activity.url)")
+            switch activity.link {
+            case .video(let id):
+                print("Type: Video")
+                print("ID: \(id)")
+            case .post(let id):
+                print("Type: Post")
+                print("ID: \(id)")
+            case .channel(let id):
+                print("Type: Channel")
+                print("ID: \(id)")
+            case .playlist(let id):
+                print("Type: Playlist")
+                print("ID: \(id)")
+            case .search(let query):
+                print("Type: Search")
+                print("Query: \(query)")
+            }
+            print("URL: \(activity.link.url)")
             print("Time: \(activity.timestamp)")
-            return
         }
     }
 }

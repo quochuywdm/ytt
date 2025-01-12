@@ -21,8 +21,31 @@ public struct Activity: Codable {
         case searchedFor = "searched for"
     }
 
+    public enum Link: Codable {
+        case video(id: String)
+        case post(id: String)
+        case channel(id: String)
+        case playlist(id: String)
+        case search(query: String)
+
+        public var url: URL {
+            switch self {
+            case .video(let id):
+                return URL(string: "https://www.youtube.com/watch?v=\(id)")!
+            case .post(let id):
+                return URL(string: "https://www.youtube.com/post/\(id)")!
+            case .channel(let id):
+                return URL(string: "https://www.youtube.com/channel/\(id)")!
+            case .playlist(let id):
+                return URL(string: "https://www.youtube.com/playlist?list=\(id)")!
+            case .search(let query):
+                return URL(string: "https://www.youtube.com/results?search_query=\(query)")!
+            }
+        }
+    }
+
     public let action: Action
-    public let url: URL
+    public let link: Link
     public let timestamp: Date
 }
 
