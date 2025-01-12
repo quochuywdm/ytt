@@ -65,6 +65,26 @@ public struct VideoInfo: Codable {
     public let channelURL: URL?
     public let videoURL: URL?
     public let transcript: [TranscriptMoment]?
+
+    public func withoutTranscript() -> VideoInfo {
+        return VideoInfo(
+            videoId: videoId,
+            title: title,
+            channelId: channelId,
+            channelName: channelName,
+            description: description,
+            publishedAt: publishedAt,
+            uploadedAt: uploadedAt,
+            viewCount: viewCount,
+            duration: duration,
+            category: category,
+            isLive: isLive,
+            thumbnails: thumbnails,
+            channelURL: channelURL,
+            videoURL: videoURL,
+            transcript: nil
+        )
+    }
 }
 
 public struct VideoThumbnail: Codable {
