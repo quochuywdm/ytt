@@ -1,40 +1,6 @@
 import Foundation
 
-public struct VideoInfo: Codable {
-    public let title: String
-    public let channelId: String
-    public let channelName: String
-    public let description: String
-    public let publishedAt: Date
-    public let viewCount: Int
-    public let likeCount: Int
-}
-
-public struct TranscriptMoment: Codable {
-    public let start: Double
-    public let duration: Double
-    public let text: String
-}
-
 public enum YouTubeTranscriptKit {
-    private struct CaptionTrack: Codable {
-        public let baseUrl: String
-        public let vssId: String
-        public let languageCode: String
-    }
-
-    private struct CaptionsResponse: Codable {
-        public let captions: CaptionsData
-    }
-
-    private struct CaptionsData: Codable {
-        public let playerCaptionsTracklistRenderer: CaptionTrackList
-    }
-
-    private struct CaptionTrackList: Codable {
-        public let captionTracks: [CaptionTrack]
-    }
-
     public enum TranscriptError: Error {
         case invalidURL
         case invalidVideoID
@@ -59,6 +25,8 @@ public enum YouTubeTranscriptKit {
         return url
     }
 
+    // MARK: - Video Info
+
     public static func getVideoInfo(videoID: String) async throws -> VideoInfo {
         let url = try youtubeURL(fromID: videoID)
         return try await getVideoInfo(url: url)
@@ -76,9 +44,11 @@ public enum YouTubeTranscriptKit {
             throw TranscriptError.invalidHTMLFormat
         }
 
-        // TODO: Parse video info from htmlString
-        throw TranscriptError.noVideoInfo
+        let tags = parseHTMLTags(from: htmlString)
+        return try extractVideoInfo(from: tags)
     }
+
+    // MARK: - Transcripts
 
     public static func getTranscript(videoID: String) async throws -> [TranscriptMoment] {
         let url = try youtubeURL(fromID: videoID)
@@ -100,6 +70,71 @@ public enum YouTubeTranscriptKit {
         let tracks = try extractCaptionTracks(from: htmlString)
         let text = try await getTranscriptText(from: tracks)
         return text
+    }
+
+    // MARK: - Private
+
+    private static func parseHTMLTags(from html: String) -> (meta: [MetaTag], links: [LinkTag]) {
+        var metaTags: [MetaTag] = []
+        var linkTags: [LinkTag] = []
+
+        // Find all meta tags
+        let metaPattern = #/<meta[^>]+>/# // matches <meta ...> tags
+        for match in html.matches(of: metaPattern) {
+            if let tag = MetaTag(tag: String(match.0)) {
+                metaTags.append(tag)
+            }
+        }
+
+        // Find all link tags
+        let linkPattern = #/<link[^>]+>/# // matches <link ...> tags
+        for match in html.matches(of: linkPattern) {
+            if let tag = LinkTag(tag: String(match.0)) {
+                linkTags.append(tag)
+            }
+        }
+
+        return (metaTags, linkTags)
+    }
+
+    private static func extractVideoInfo(from tags: (meta: [MetaTag], links: [LinkTag])) throws -> VideoInfo {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        // Helper to find meta tag content
+        func metaContent(property: String? = nil, name: String? = nil) -> String? {
+            if let property = property {
+                return tags.meta.first { $0.property == property }?.content
+            }
+            if let name = name {
+                return tags.meta.first { $0.name == name }?.content
+            }
+            return nil
+        }
+
+        // Required fields - throw if missing
+        guard let title = metaContent(property: "og:title") ?? metaContent(name: "title"),
+              let channelName = metaContent(property: "og:video:director") ?? metaContent(name: "author"),
+              let publishedStr = metaContent(property: "og:video:release_date") ?? metaContent(name: "uploadDate"),
+              let published = dateFormatter.date(from: String(publishedStr.prefix(10))),
+              let description = metaContent(property: "og:description") ?? metaContent(name: "description"),
+              let channelId = metaContent(name: "channelId") else {
+            throw TranscriptError.noVideoInfo
+        }
+
+        // Optional fields - default to 0 if missing
+        let viewCount = Int(metaContent(name: "interactionCount") ?? "0") ?? 0
+        let likeCount = Int(metaContent(name: "likes") ?? "0") ?? 0
+
+        return VideoInfo(
+            title: title.stringByDecodingHTMLEntities,
+            channelId: channelId,
+            channelName: channelName.stringByDecodingHTMLEntities,
+            description: description.stringByDecodingHTMLEntities,
+            publishedAt: published,
+            viewCount: viewCount,
+            likeCount: likeCount
+        )
     }
 
     private static func getTranscriptText(from tracks: [CaptionTrack]) async throws -> [TranscriptMoment] {
