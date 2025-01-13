@@ -209,7 +209,13 @@ public enum YouTubeTranscriptKit {
             throw TranscriptError.invalidURL
         }
 
-        let (data, _) = try await URLSession.shared.data(from: url)
+        let data: Data
+        do {
+            (data, _) = try await URLSession.shared.data(from: url)
+        } catch {
+            throw TranscriptError.networkError(error)
+        }
+
         guard let xmlString = String(data: data, encoding: .utf8) else {
             throw TranscriptError.invalidXMLFormat
         }
