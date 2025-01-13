@@ -1,6 +1,13 @@
 import Foundation
 
 public enum YouTubeTranscriptKit {
+    private static let session: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.httpCookieAcceptPolicy = .never
+        config.httpShouldSetCookies = false
+        return URLSession(configuration: config)
+    }()
+
     public enum TranscriptError: Error {
         case invalidURL
         case invalidVideoID
@@ -37,10 +44,7 @@ public enum YouTubeTranscriptKit {
         let data: Data
         do {
             var request = URLRequest(url: url)
-//            request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
-//            request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
-//            request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
-            (data, _) = try await URLSession.shared.data(for: request)
+            (data, _) = try await session.data(for: request)
         } catch {
             throw TranscriptError.networkError(error)
         }
@@ -64,10 +68,7 @@ public enum YouTubeTranscriptKit {
         let data: Data
         do {
             var request = URLRequest(url: url)
-//            request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
-//            request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
-//            request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
-            (data, _) = try await URLSession.shared.data(for: request)
+            (data, _) = try await session.data(for: request)
         } catch {
             throw TranscriptError.networkError(error)
         }
@@ -219,7 +220,8 @@ public enum YouTubeTranscriptKit {
 
         let data: Data
         do {
-            (data, _) = try await URLSession.shared.data(from: url)
+            var request = URLRequest(url: url)
+            (data, _) = try await session.data(for: request)
         } catch {
             throw TranscriptError.networkError(error)
         }
