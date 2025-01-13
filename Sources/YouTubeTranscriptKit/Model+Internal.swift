@@ -20,7 +20,7 @@ struct Microformat: Codable {
 
 struct PlayerMicroformat: Codable {
     let title: TextRuns
-    let description: TextRuns
+    let description: TextRuns?
     let lengthSeconds: String
     let externalChannelId: String
     let category: String
