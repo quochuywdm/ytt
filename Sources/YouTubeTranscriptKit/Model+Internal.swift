@@ -42,7 +42,7 @@ struct TextRun: Codable {
 struct LiveBroadcastDetails: Codable {
     let isLiveNow: Bool
     let startTimestamp: String
-    let endTimestamp: String
+    let endTimestamp: String? // end can be nil if isLiveNow == true
 }
 
 struct VideoDetails: Codable {
@@ -54,6 +54,7 @@ struct VideoDetails: Codable {
     let viewCount: String
     let author: String
     let thumbnail: ThumbnailContainer
+    let isLiveContent: Bool
 }
 
 struct ThumbnailContainer: Codable {
