@@ -1,6 +1,13 @@
 import Foundation
 
 public enum YouTubeTranscriptKit {
+    private static let session: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.httpCookieAcceptPolicy = .never
+        config.httpShouldSetCookies = false
+        return URLSession(configuration: config)
+    }()
+
     public enum TranscriptError: Error {
         case invalidURL
         case invalidVideoID
@@ -36,7 +43,8 @@ public enum YouTubeTranscriptKit {
     public static func getVideoInfo(url: URL, includeTranscript: Bool = true) async throws -> VideoInfo {
         let data: Data
         do {
-            (data, _) = try await URLSession.shared.data(from: url)
+            var request = URLRequest(url: url)
+            (data, _) = try await session.data(for: request)
         } catch {
             throw TranscriptError.networkError(error)
         }
@@ -59,7 +67,8 @@ public enum YouTubeTranscriptKit {
     public static func getTranscript(url: URL) async throws -> [TranscriptMoment] {
         let data: Data
         do {
-            (data, _) = try await URLSession.shared.data(from: url)
+            var request = URLRequest(url: url)
+            (data, _) = try await session.data(for: request)
         } catch {
             throw TranscriptError.networkError(error)
         }
@@ -211,7 +220,8 @@ public enum YouTubeTranscriptKit {
 
         let data: Data
         do {
-            (data, _) = try await URLSession.shared.data(from: url)
+            var request = URLRequest(url: url)
+            (data, _) = try await session.data(for: request)
         } catch {
             throw TranscriptError.networkError(error)
         }
