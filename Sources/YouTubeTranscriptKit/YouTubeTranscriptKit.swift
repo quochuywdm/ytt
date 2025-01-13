@@ -106,12 +106,16 @@ public enum YouTubeTranscriptKit {
                     let channelURL = URL(string: "https://www.youtube.com/channel/\(details.channelId)")
                     let videoURL = URL(string: "https://www.youtube.com/watch?v=\(details.videoId)")
 
-                    // Extract transcript if requested
+                    // Attempt to extract transcript if requested
                     let transcript: [TranscriptMoment]?
-                    if includeTranscript {
-                        let captionTracks = try extractCaptionTracks(from: htmlString)
-                        transcript = try await getTranscriptText(from: captionTracks)
-                    } else {
+                    do {
+                        if includeTranscript {
+                            let captionTracks = try extractCaptionTracks(from: htmlString)
+                            transcript = try await getTranscriptText(from: captionTracks)
+                        } else {
+                            transcript = nil
+                        }
+                    } catch {
                         transcript = nil
                     }
 
