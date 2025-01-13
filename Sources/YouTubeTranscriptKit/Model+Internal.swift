@@ -23,7 +23,6 @@ struct PlayerMicroformat: Codable {
     let description: TextRuns
     let lengthSeconds: String
     let externalChannelId: String
-    let viewCount: String
     let category: String
     let publishDate: String
     let uploadDate: String
