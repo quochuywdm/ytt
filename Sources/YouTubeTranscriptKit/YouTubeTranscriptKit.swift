@@ -184,18 +184,22 @@ public enum YouTubeTranscriptKit {
             throw TranscriptError.noCaptionData
         }
 
+        let prioLanguageCodes = ["en", "en-US"]
         // Sort tracks: English first (prioritizing non 'a' vssId), then others
         return allTracks.sorted { track1, track2 in
-            if track1.languageCode == "en" && track2.languageCode != "en" {
-                return true
-            }
-            if track1.languageCode != "en" && track2.languageCode == "en" {
-                return false
-            }
-            if track1.languageCode == "en" && track2.languageCode == "en" {
-                let track1StartsWithA = track1.vssId.hasPrefix("a")
-                let track2StartsWithA = track2.vssId.hasPrefix("a")
-                return track1StartsWithA == track2StartsWithA ? true : !track1StartsWithA
+            for prioLanguageCode in prioLanguageCodes {
+                if track1.languageCode == prioLanguageCode && track2.languageCode != prioLanguageCode {
+                    return true
+                }
+                if track1.languageCode != prioLanguageCode && track2.languageCode == prioLanguageCode {
+                    return false
+                }
+                
+                if track1.languageCode == prioLanguageCode && track2.languageCode == prioLanguageCode {
+                    let track1StartsWithA = track1.vssId.hasPrefix("a")
+                    let track2StartsWithA = track2.vssId.hasPrefix("a")
+                    return track1StartsWithA == track2StartsWithA ? true : !track1StartsWithA
+                }
             }
             return true
         }
