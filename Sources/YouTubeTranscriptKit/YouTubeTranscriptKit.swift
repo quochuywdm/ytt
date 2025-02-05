@@ -59,12 +59,12 @@ public enum YouTubeTranscriptKit {
 
     // MARK: - Transcripts
 
-    public static func getTranscript(videoID: String) async throws -> [TranscriptMoment] {
+    public static func getTranscript(videoID: String) async throws -> [TranscriptContainer] {
         let url = try youtubeURL(fromID: videoID)
         return try await getTranscript(url: url)
     }
 
-    public static func getTranscript(url: URL) async throws -> [TranscriptMoment] {
+    public static func getTranscript(url: URL) async throws -> [TranscriptContainer] {
         let data: Data
         do {
             var request = URLRequest(url: url)
@@ -78,8 +78,8 @@ public enum YouTubeTranscriptKit {
         }
 
         let tracks = try extractCaptionTracks(from: htmlString)
-        let text = try await getTranscriptText(from: tracks)
-        return text
+        let containers = try await getTranscriptContainers(from: tracks)
+        return containers
     }
 
     // MARK: - Private
@@ -116,16 +116,16 @@ public enum YouTubeTranscriptKit {
                     let videoURL = URL(string: "https://www.youtube.com/watch?v=\(details.videoId)")
 
                     // Attempt to extract transcript if requested
-                    let transcript: [TranscriptMoment]?
+                    let transcriptContainers: [TranscriptContainer]?
                     do {
                         if includeTranscript {
                             let captionTracks = try extractCaptionTracks(from: htmlString)
-                            transcript = try await getTranscriptText(from: captionTracks)
+                            transcriptContainers = try await getTranscriptContainers(from: captionTracks)
                         } else {
-                            transcript = nil
+                            transcriptContainers = nil
                         }
                     } catch {
-                        transcript = nil
+                        transcriptContainers = nil
                     }
 
                     return VideoInfo(
@@ -143,7 +143,7 @@ public enum YouTubeTranscriptKit {
                         thumbnails: thumbnails,
                         channelURL: channelURL,
                         videoURL: videoURL,
-                        transcript: transcript
+                        transcriptContainers: transcriptContainers
                     )
                 } catch {
                     // Continue to next match on parse failure
@@ -205,15 +205,22 @@ public enum YouTubeTranscriptKit {
         }
     }
 
-    private static func getTranscriptText(from tracks: [CaptionTrack]) async throws -> [TranscriptMoment] {
+    private static func getTranscriptContainers(from tracks: [CaptionTrack]) async throws -> [TranscriptContainer] {
+        var containers: [TranscriptContainer]  = []
         for track in tracks {
             do {
-                return try await getTranscriptText(from: track)
+                let moments =  try await getTranscriptText(from: track)
+                let container = TranscriptContainer(languageCode: track.languageCode, vssId: track.vssId, transcriptMoments: moments)
+                containers.append(container)
             } catch {
                 continue
             }
         }
-        throw TranscriptError.noTranscriptData
+        if containers.count > 0 {
+            return containers
+        } else {
+            throw TranscriptError.noTranscriptData
+        }
     }
 
     private static func getTranscriptText(from track: CaptionTrack) async throws -> [TranscriptMoment] {

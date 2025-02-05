@@ -64,7 +64,7 @@ public struct VideoInfo: Codable {
     public let thumbnails: [VideoThumbnail]?
     public let channelURL: URL?
     public let videoURL: URL?
-    public let transcript: [TranscriptMoment]?
+    public let transcriptContainers: [TranscriptContainer]?
 
     public func withoutTranscript() -> VideoInfo {
         return VideoInfo(
@@ -82,7 +82,7 @@ public struct VideoInfo: Codable {
             thumbnails: thumbnails,
             channelURL: channelURL,
             videoURL: videoURL,
-            transcript: nil
+            transcriptContainers: nil
         )
     }
 }
@@ -97,4 +97,10 @@ public struct TranscriptMoment: Codable {
     public let start: Double
     public let duration: Double
     public let text: String
+}
+
+public struct TranscriptContainer: Codable {
+    public let languageCode: String
+    public let vssId: String
+    public let transcriptMoments: [TranscriptMoment]
 }

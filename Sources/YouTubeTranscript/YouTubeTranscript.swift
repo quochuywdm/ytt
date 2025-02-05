@@ -21,16 +21,16 @@ struct Transcribe: AsyncParsableCommand {
     var input: String
 
     mutating func run() async throws {
-        let transcript: [TranscriptMoment]
+        let transcriptContainers: [TranscriptContainer]
 
         if input.contains("youtube.com") || input.contains("youtu.be"),
            let url = URL(string: input) {
-            transcript = try await YouTubeTranscriptKit.getTranscript(url: url)
+            transcriptContainers = try await YouTubeTranscriptKit.getTranscript(url: url)
         } else {
-            transcript = try await YouTubeTranscriptKit.getTranscript(videoID: input)
+            transcriptContainers = try await YouTubeTranscriptKit.getTranscript(videoID: input)
         }
 
-        print(transcript)
+        print(transcriptContainers)
     }
 }
 
